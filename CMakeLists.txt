@@ -40,6 +40,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" ST
     set(CMAKE_COMPILER_IS_CLANG ON)
 endif ()
 
+# Set local MINGW variable when we are compiling on MingW.
+# This is a workaround for CMake versions <3.20
+# https://cmake.org/cmake/help/latest/variable/MINGW.html
+if (CMAKE_CXX_COMPILER MATCHES "x86_64-w64-mingw32")
+  set(MINGW On)
+endif ()
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # files needed for the library ArkReactor
@@ -57,6 +64,9 @@ target_compile_features(ArkReactor PRIVATE cxx_std_20)
 if (ARK_UNITY_BUILD)
     set_target_properties(ArkReactor PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE BATCH UNITY_BUILD_BATCH_SIZE 16)
     set_source_files_properties(src/arkreactor/VM/VM.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION true)
+    if (MINGW)
+      target_compile_options(ArkReactor PRIVATE "-Wa,-mbig-obj")
+    endif ()
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANG OR APPLE)
@@ -90,6 +100,7 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANG OR APPLE)
 
     # Enable FMT_LIB_EXPORT on MingW, otherwise it will fail to compile.
     if (MINGW)
+        message (STATUS "Enabling MINGW Compatibility")
         target_compile_definitions(ArkReactor PUBLIC FMT_LIB_EXPORT)
         # Add -static to linking flags for MingW, otherwise it will
         # dynamically link to libgcc_s_seh-1.dll, libwinpthread-1.dll
@@ -223,6 +234,9 @@ if (ARK_TESTS)
 
     if (ARK_UNITY_BUILD)
         set_target_properties(unittests PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE BATCH UNITY_BUILD_BATCH_SIZE 16)
+        if (MINGW)
+            target_compile_options(unittests PRIVATE "-Wa,-mbig-obj")
+        endif ()
     endif ()
 
     if (ARK_COVERAGE AND CMAKE_COMPILER_IS_CLANG)
@@ -295,6 +309,9 @@ if (ARK_BUILD_EXE)
 
     if (ARK_UNITY_BUILD)
         set_target_properties(arkscript PROPERTIES UNITY_BUILD ON UNITY_BUILD_MODE BATCH UNITY_BUILD_BATCH_SIZE 16)
+        if (MINGW)
+            target_compile_options(arkscript PRIVATE "-Wa,-mbig-obj")
+        endif ()
     endif ()
 
     if (MINGW)

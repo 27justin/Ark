@@ -38,6 +38,10 @@ runs:
         elif [[ '${{ inputs.compiler }}' == 'gcc' ]]; then
           echo "cc=gcc-${{ inputs.compiler_version }}" >> $GITHUB_OUTPUT
           echo "cxx=g++-${{ inputs.compiler_version }}" >> $GITHUB_OUTPUT
+        elif [[ '${{ inputs.compiler }}' == 'mingw' ]]; then
+          echo "cc=x86_64-w64-mingw32-gcc" >> $GITHUB_OUTPUT
+          echo "cxx=x86_64-w64-mingw32-g++" >> $GITHUB_OUTPUT
+          echo "toolchain=cmake/mingw.cmake" >> $GITHUB_OUTPUT
         fi
 
     - name: Update GNU compilers
@@ -54,6 +58,12 @@ runs:
         sudo apt-get install -y clang-${{ inputs.compiler_version }} lld-${{ inputs.compiler_version }} \
           libc++-${{ inputs.compiler_version }}-dev libc++abi-${{ inputs.compiler_version }}-dev  \
           clang-tools-${{ inputs.compiler_version }} llvm-${{ inputs.compiler_version }}
+
+    - name: Update MingW cross compiler
+      if: startsWith(inputs.os_name, 'ubuntu') && inputs.compiler == 'mingw'
+      shell: bash
+      run: |
+        sudo apt-get install -y gcc-mingw-w64=${{ inputs.compiler_version }} g++-mingw-w64=${{ inputs.compiler_version }}
 
     - name: Update LLVM compilers
       if: startsWith(inputs.os_name, 'macos')
@@ -103,7 +113,8 @@ runs:
          -DARK_BUILD_EXE=On \
          -DARK_BUILD_MODULES=$ToggleModules -DARK_MOD_ALL=$ToggleModules -DARK_MOD_DRAFT=$ToggleModules \
          -DARK_TESTS=On \
-         -DARK_UNITY_BUILD=On
+         -DARK_UNITY_BUILD=On \
+         -DCMAKE_TOOLCHAIN_FILE=${{ steps.compilers.outputs.toolchain }}
         cmake --build build --config $BUILD_TYPE -j $(nproc)
 
     - name: Configure CMake Ark
